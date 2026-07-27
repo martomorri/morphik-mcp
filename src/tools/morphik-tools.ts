@@ -13,6 +13,7 @@ import {
 import { makeMorphikRequest } from "../core/api-client.js";
 import { processDocumentResponse } from "../core/helpers.js";
 import { resizeImageIfNeeded } from "../core/image-processing.js";
+import { requireScope, SCOPES } from "../core/authplane.js";
 
 type McpContentItem =
   | { type: "text"; text: string }
@@ -182,7 +183,8 @@ export function registerMorphikTools(server: McpServer, config: MorphikConfig) {
       folderName: z.string().optional(),
       endUserId: z.string().optional(),
     },
-    async ({ content, filename, metadata, rules, useColpali, folderName, endUserId }) => {
+    async ({ content, filename, metadata, rules, useColpali, folderName, endUserId }, extra) => {
+      requireScope(SCOPES.DOCUMENTS_WRITE, extra.authInfo);
       const requestBody: IngestTextRequest = {
         content,
         filename,
@@ -228,7 +230,8 @@ export function registerMorphikTools(server: McpServer, config: MorphikConfig) {
       folderName: z.union([z.string(), z.array(z.string())]).optional(),
       endUserId: z.string().optional(),
     },
-    async ({ query, filters, k, minScore, useReranking, useColpali, padding, graphName, hopDepth, includePaths, folderName, endUserId }) => {
+    async ({ query, filters, k, minScore, useReranking, useColpali, padding, graphName, hopDepth, includePaths, folderName, endUserId }, extra) => {
+      requireScope(SCOPES.DOCUMENTS_READ, extra.authInfo);
       const combinedFilters = combineFilters(filters);
       const requestBody: RetrieveRequest = {
         query,
@@ -277,7 +280,8 @@ export function registerMorphikTools(server: McpServer, config: MorphikConfig) {
       folderName: z.union([z.string(), z.array(z.string())]).optional(),
       endUserId: z.string().optional(),
     },
-    async ({ query, filters, k, minScore, useReranking, useColpali, folderName, endUserId }) => {
+    async ({ query, filters, k, minScore, useReranking, useColpali, folderName, endUserId }, extra) => {
+      requireScope(SCOPES.DOCUMENTS_READ, extra.authInfo);
       const combinedFilters = combineFilters(filters);
       const requestBody: RetrieveRequest = {
         query,
@@ -343,7 +347,8 @@ export function registerMorphikTools(server: McpServer, config: MorphikConfig) {
       folderName: z.union([z.string(), z.array(z.string())]).optional(),
       endUserId: z.string().optional(),
     },
-    async ({ query, limit, folderName, endUserId }) => {
+    async ({ query, limit, folderName, endUserId }, extra) => {
+      requireScope(SCOPES.DOCUMENTS_READ, extra.authInfo);
       const url = new URL(`${config.apiBase}/documents/search`);
       const normalizedFolder = normalizeFolderParam(folderName);
       if (normalizedFolder) buildFolderQueryParams(url, normalizedFolder);
@@ -389,7 +394,8 @@ export function registerMorphikTools(server: McpServer, config: MorphikConfig) {
       folderName: z.union([z.string(), z.array(z.string())]).optional(),
       endUserId: z.string().optional(),
     },
-    async ({ documentId, startPage, endPage, folderName, endUserId }) => {
+    async ({ documentId, startPage, endPage, folderName, endUserId }, extra) => {
+      requireScope(SCOPES.DOCUMENTS_READ, extra.authInfo);
       if (endPage < startPage) {
         return { content: [{ type: "text", text: "endPage must be greater than or equal to startPage." }], isError: true };
       }
@@ -466,7 +472,8 @@ export function registerMorphikTools(server: McpServer, config: MorphikConfig) {
       sortBy: z.enum(["created_at", "updated_at", "filename", "external_id"]).optional(),
       sortDirection: z.enum(["asc", "desc"]).optional(),
     },
-    async ({ skip, limit, filters, folderName, endUserId, getCount, fields, sortBy, sortDirection }) => {
+    async ({ skip, limit, filters, folderName, endUserId, getCount, fields, sortBy, sortDirection }, extra) => {
+      requireScope(SCOPES.DOCUMENTS_READ, extra.authInfo);
       const combinedFilters = combineFilters(filters);
       const requestBody: ListDocsRequest = {
         skip: skip ?? 0,
@@ -525,7 +532,8 @@ export function registerMorphikTools(server: McpServer, config: MorphikConfig) {
     "get-document",
     "Lookup metadata for a document by ID.",
     { documentId: z.string() },
-    async ({ documentId }) => {
+    async ({ documentId }, extra) => {
+      requireScope(SCOPES.DOCUMENTS_READ, extra.authInfo);
       const response = await makeMorphikRequest<Document>({
         url: `/documents/${documentId}`,
         method: "GET",
@@ -545,7 +553,8 @@ export function registerMorphikTools(server: McpServer, config: MorphikConfig) {
     "delete-document",
     "Delete a document and all of its derived data.",
     { documentId: z.string() },
-    async ({ documentId }) => {
+    async ({ documentId }, extra) => {
+      requireScope(SCOPES.DOCUMENTS_DELETE, extra.authInfo);
       const response = await makeMorphikRequest<Record<string, any>>({
         url: `/documents/${documentId}`,
         method: "DELETE",
@@ -565,7 +574,8 @@ export function registerMorphikTools(server: McpServer, config: MorphikConfig) {
     "check-ingestion-status",
     "Check processing status for a document that is being ingested or processed.",
     { documentId: z.string() },
-    async ({ documentId }) => {
+    async ({ documentId }, extra) => {
+      requireScope(SCOPES.DOCUMENTS_READ, extra.authInfo);
       const response = await makeMorphikRequest<Record<string, any>>({
         url: `/documents/${documentId}/status`,
         method: "GET",
@@ -606,7 +616,8 @@ export function registerMorphikTools(server: McpServer, config: MorphikConfig) {
         .optional(),
       logic: z.enum(["and", "or"]).optional(),
     },
-    async ({ action, expression, expressionJson, rules, logic }) => {
+    async ({ action, expression, expressionJson, rules, logic }, extra) => {
+      requireScope(SCOPES.DOCUMENTS_READ, extra.authInfo);
       const resolvedAction = action || (expression || expressionJson || rules ? "set" : "show");
 
       if (resolvedAction === "show") {

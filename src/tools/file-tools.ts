@@ -9,6 +9,7 @@ import { validatePath } from "../core/security.js";
 import { searchFiles, getFileStats } from "../core/file-operations.js";
 import { makeDirectRequest } from "../core/api-client.js";
 import { getMimeType } from "../core/helpers.js";
+import { requireScope, SCOPES } from "../core/authplane.js";
 
 export function registerFileTools(server: McpServer, config: MorphikConfig) {
   // 7. List Allowed Directories
@@ -16,7 +17,8 @@ export function registerFileTools(server: McpServer, config: MorphikConfig) {
     "list-allowed-directories",
     "Get a list of directories the MCP server is allowed to access for file operations. Use this to understand where you can browse and select files for ingestion into Morphik.",
     {},
-    async () => {
+    async (_args, extra) => {
+      requireScope(SCOPES.FILESYSTEM_READ, extra.authInfo);
       return {
         content: [
           {
@@ -35,7 +37,8 @@ export function registerFileTools(server: McpServer, config: MorphikConfig) {
     {
       path: z.string().describe("The directory path to list files from"),
     },
-    async ({ path: dirPath }) => {
+    async ({ path: dirPath }, extra) => {
+      requireScope(SCOPES.FILESYSTEM_READ, extra.authInfo);
       try {
         // Validate path is within allowed directories
         const validPath = await validatePath(dirPath, config.allowedDirectories);
@@ -86,7 +89,8 @@ export function registerFileTools(server: McpServer, config: MorphikConfig) {
       pattern: z.string().describe("The search pattern (case-insensitive)"),
       excludePatterns: z.array(z.string()).optional().describe("Patterns to exclude from search results"),
     },
-    async ({ path: searchPath, pattern, excludePatterns }) => {
+    async ({ path: searchPath, pattern, excludePatterns }, extra) => {
+      requireScope(SCOPES.FILESYSTEM_READ, extra.authInfo);
       try {
         // Validate path is within allowed directories
         const validPath = await validatePath(searchPath, config.allowedDirectories);
@@ -132,7 +136,8 @@ export function registerFileTools(server: McpServer, config: MorphikConfig) {
     {
       path: z.string().describe("Path to the file or directory"),
     },
-    async ({ path: filePath }) => {
+    async ({ path: filePath }, extra) => {
+      requireScope(SCOPES.FILESYSTEM_READ, extra.authInfo);
       try {
         // Validate path is within allowed directories
         const validPath = await validatePath(filePath, config.allowedDirectories);
@@ -180,7 +185,8 @@ export function registerFileTools(server: McpServer, config: MorphikConfig) {
       endUserId: z.string().optional().describe("Optional end user ID for scoping"),
       useColpali: z.boolean().optional().describe("Whether to use the colpali embedding model"),
     },
-    async ({ path: filePath, metadata, rules, folderName, endUserId, useColpali }) => {
+    async ({ path: filePath, metadata, rules, folderName, endUserId, useColpali }, extra) => {
+      requireScope(SCOPES.DOCUMENTS_WRITE, extra.authInfo);
       try {
         // Validate path is within allowed directories
         const validPath = await validatePath(filePath, config.allowedDirectories);
@@ -274,7 +280,8 @@ export function registerFileTools(server: McpServer, config: MorphikConfig) {
       endUserId: z.string().optional().describe("Optional end user ID for scoping"),
       useColpali: z.boolean().optional().describe("Whether to use the colpali embedding model"),
     },
-    async ({ filename, base64Content, metadata, rules, folderName, endUserId, useColpali }) => {
+    async ({ filename, base64Content, metadata, rules, folderName, endUserId, useColpali }, extra) => {
+      requireScope(SCOPES.DOCUMENTS_WRITE, extra.authInfo);
       try {
         // Decode base64 content to buffer
         const buffer = Buffer.from(base64Content, 'base64');
@@ -368,7 +375,8 @@ export function registerFileTools(server: McpServer, config: MorphikConfig) {
       endUserId: z.string().optional().describe("Optional end user ID for scoping"),
       useColpali: z.boolean().optional().describe("Whether to use the colpali embedding model"),
     },
-    async ({ paths, metadata, rules, folderName, endUserId, useColpali }) => {
+    async ({ paths, metadata, rules, folderName, endUserId, useColpali }, extra) => {
+      requireScope(SCOPES.DOCUMENTS_WRITE, extra.authInfo);
       try {
         // Validate all paths are within allowed directories and are files
         const validPaths = await Promise.all(

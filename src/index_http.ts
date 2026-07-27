@@ -5,6 +5,25 @@ import express, { Request, Response } from "express";
 import cors from "cors";
 import { parseConfig } from "./core/config.js";
 import { createMcpServer } from "./core/server.js";
+import { ALL_SCOPES, SCOPES } from "./core/authplane.js";
+
+// === Authplane integration =================================================
+// `authplaneMcpAuth()` performs RFC 8414 metadata discovery and a JWKS fetch
+// at module load, so the authorization server must already be reachable at
+// AUTHPLANE_ISSUER when this file is imported — start the AS first.
+// `requiredScopes` is narrower than `scopes`: the middleware only demands the
+// base access scope, and each tool checks its own capability scope. Without
+// this split the middleware would demand all five scopes on every call.
+// `devMode: true` relaxes the SDK's SSRF guard to allow an http:// localhost
+// issuer; it must be off in production.
+// authplane:begin
+import { authplaneMcpAuth } from "@authplane/mcp";
+const auth = await authplaneMcpAuth({
+  issuer: process.env.AUTHPLANE_ISSUER!,
+  resource: process.env.AUTHPLANE_RESOURCE!,
+  scopes: ALL_SCOPES, requiredScopes: [SCOPES.MCP_ACCESS], devMode: true,
+});
+// authplane:end
 
 // HTTP server configuration
 const PORT = process.env.PORT || 8976;
@@ -25,6 +44,11 @@ async function main() {
   // Add URL encoded parsing middleware
   app.use(express.urlencoded({ extended: true, limit: '50mb' }));
   
+  // RFC 9728 Protected Resource Metadata — tells MCP clients which
+  // authorization server to use and which scopes this server understands.
+  // Deliberately unauthenticated: a client needs it *before* it has a token.
+  app.get(auth.protectedResourceMetadataPath, auth.protectedResourceMetadataHandler);
+
   // Health check endpoint
   app.get('/health', (_req: Request, res: Response) => {
     res.json({ 
@@ -37,7 +61,7 @@ async function main() {
   });
   
   // MCP endpoint for stateless mode
-  app.post('/mcp', async (req: Request, res: Response) => {
+  app.post('/mcp', auth.bearerAuth, async (req: Request, res: Response) => {
     try {
       // Create new server and transport for each request (stateless)
       const server = createMcpServer(config);

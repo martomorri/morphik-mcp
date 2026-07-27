@@ -39,7 +39,9 @@
     "node": ">=16.0.0"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.17.0",
+    "@authplane/mcp": "0.2.0",
+    "@authplane/sdk": "0.2.0",
+    "@modelcontextprotocol/sdk": "1.21.2",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.3",
     "@types/minimatch": "^5.1.2",

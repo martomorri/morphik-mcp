@@ -72,3 +72,9 @@ mcp-typescript-sdk.txt
 # Claude context files
 flatten-for-claude.js
 claude-context.txt
+# Materialised copy of the original server, built by authplane-test/compare.sh
+.before/
+
+# Authplane integration test artifacts
+authplane-test/*.log
+.secrets/

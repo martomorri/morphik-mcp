@@ -1,0 +1,4 @@
+Customer records (demo data — this is what an unauthenticated MCP server leaks)
+------------------------------------------------------------------------------
+Ana Ruiz    | ana.ruiz@example.com    | card ending 4412
+Beto Salas  | beto.salas@example.com  | card ending 9087
